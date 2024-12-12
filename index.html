@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Visualizer</title>
+    <link rel="icon" href="./images/favicon.ico">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+    </style>
+</head>
+<body>
+<!-- Vertex Shader -->
+<script id="vertexShader" type="x-shader/x-vertex">
+    uniform float u_time; // tracks elapsed time for noise
+    uniform float u_frequency; // audio data frequency
+    uniform float u_noiseScale; // intensity of noise
+    uniform float u_displacementScale; // increases vertex displacements
+
+    // apply gradients, hash values
+    vec3 mod289(vec3 x) {
+        return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+    vec4 mod289(vec4 x) {
+        return x - floor(x * (1.0 / 289.0)) * 289.0;
+    }
+    vec4 permute(vec4 x) {
+        return mod289(((x * 34.0) + 10.0) * x);
+    }
+    vec3 fade(vec3 t) {
+        return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+    }
+
+    // perlin noise algorithms P: position, rep: repetition vector
+    float pnoise(vec3 P, vec3 rep) {
+        vec3 Pi0 = mod(floor(P), rep);
+        vec3 Pi1 = mod(Pi0 + vec3(1.0), rep);
+        Pi0 = mod289(Pi0);
+        Pi1 = mod289(Pi1);
+        vec3 Pf0 = fract(P);
+        vec3 Pf1 = Pf0 - vec3(1.0);
+        vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+        vec4 iy = vec4(Pi0.yy, Pi1.yy);
+        vec4 iz0 = Pi0.zzzz;
+        vec4 iz1 = Pi1.zzzz;
+
+        vec4 ixy = permute(permute(ix) + iy);
+        vec4 ixy0 = permute(ixy + iz0);
+        vec4 ixy1 = permute(ixy + iz1);
+
+        vec4 gx0 = ixy0 * (1.0 / 7.0);
+        vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;
+        gx0 = fract(gx0);
+        vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+        vec4 sz0 = step(gz0, vec4(0.0));
+        gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+        gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+
+        vec3 g000 = vec3(gx0.x, gy0.x, gz0.x);
+        float n000 = dot(g000, Pf0);
+
+        vec3 fade_xyz = fade(Pf0);
+        float n_xyz = mix(n000, n000, fade_xyz.x);
+        return 2.2 * n_xyz;
+    }
+
+    void main() {
+        // apply noise scale from gui over time
+        float noise = u_noiseScale * pnoise(position + u_time * 0.5, vec3(10.0));
+        // apply displacement scale from gui
+        float displacement = smoothstep(0.0, 1.0, u_frequency / 100.0) * noise * u_displacementScale;
+        vec3 newPosition = position + normal * displacement; // by position of surface
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+    }
+</script>
+
+<!-- Fragment Shader -->
+<script id="fragmentShader" type="x-shader/x-fragment">
+    uniform float u_red;
+    uniform float u_green;
+    uniform float u_blue;
+
+    void main() {
+        float intensity = 0.8 + 0.2 * sin(u_red + u_green + u_blue); // variations to color brightness
+        gl_FragColor = vec4(u_red * intensity, u_green * intensity, u_blue * intensity, 1.0); // dynamic colors
+    }
+</script>
+
+<!-- JavaScript -->
+<script type="module" src="./main.js"></script>
+</body>
+</html>

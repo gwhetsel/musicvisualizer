@@ -1,0 +1,17 @@
+{
+  "name": "musicvisualizer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "private": true,
+  "dependencies": {
+    "dat.gui": "^0.7.9",
+    "three": "^0.171.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.3"
+  }
+}
